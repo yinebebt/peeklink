@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Open TikTok, Instagram, and YouTube links in a simple browser viewer—no app installs, no feed, no account wall.">
+    <meta name="color-scheme" content="dark">
+    <meta name="theme-color" content="#0a0a0a">
+    <title>peeklink</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0a0a0a;
+            --panel: #1a1a1a;
+            --text: #e0e0e0;
+            --muted: #888;
+            --line: #333;
+            --accent: #2563eb;
+            --accent-hover: #1d4ed8;
+            --focus: #60a5fa;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg); color: var(--text);
+            min-height: 100vh;
+            display: flex; flex-direction: column;
+            align-items: center;
+            padding: 24px 20px 40px;
+        }
+        .container {
+            flex: 1;
+            max-width: 560px; width: 100%;
+            display: flex; flex-direction: column;
+            justify-content: center;
+            text-align: center;
+        }
+        h1 {
+            font-size: clamp(1.35rem, 4vw, 1.6rem);
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #fff;
+            letter-spacing: -0.02em;
+        }
+        .subtitle { font-size: 0.95rem; color: var(--muted); margin-bottom: 28px; line-height: 1.45; }
+        form { display: flex; gap: 10px; }
+        input[type="text"] {
+            flex: 1; padding: 12px 16px;
+            border: 1px solid var(--line); border-radius: 10px;
+            background: var(--panel); color: #fff; font-size: 1rem;
+            outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        input:focus { border-color: #555; }
+        input:focus-visible {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.35);
+        }
+        input::placeholder { color: #666; }
+        button {
+            padding: 12px 24px; border: none; border-radius: 10px;
+            background: var(--accent); color: #fff;
+            font-size: 1rem; font-weight: 500; cursor: pointer;
+            transition: background 0.2s; white-space: nowrap;
+        }
+        button:hover { background: var(--accent-hover); }
+        button:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.45);
+        }
+        .hint { margin-top: 22px; font-size: 0.8rem; color: #555; line-height: 1.4; }
+        .page-footer {
+            width: 100%; max-width: 560px;
+            margin-top: auto;
+            padding-top: 28px;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+            font-size: 0.78rem;
+            color: #555;
+            text-align: center;
+            line-height: 1.6;
+        }
+        .page-footer__a {
+            color: #6b7280;
+            text-decoration: none;
+        }
+        .page-footer__a:hover { color: #9ca3af; text-decoration: underline; }
+        .page-footer__sep { margin: 0 0.35em; color: #444; }
+
+        @media (max-width: 640px) {
+            form { flex-direction: column; }
+            button { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>peeklink</h1>
+        <p class="subtitle">Peek at videos without apps, accounts, or feed noise</p>
+        <form action="/view" method="POST">
+            <input type="text" name="url" placeholder="Paste a TikTok, Instagram, or YouTube link…" autofocus autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="url" aria-label="Video URL" required>
+            <button type="submit">Watch</button>
+        </form>
+        <p class="hint">No login walls, no tracking, no &ldquo;open in app&rdquo;</p>
+    </div>
+    {{template "footer" .}}
+</body>
+</html>

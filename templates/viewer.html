@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <meta name="theme-color" content="#0a0a0a">
+    <title>{{if .Result}}{{if .Result.Title}}{{.Result.Title}} — {{end}}{{end}}peeklink</title>
+    {{if .Result}}{{if eq .Result.Strategy "tiktok-oembed"}}
+    <link rel="preload" href="https://www.tiktok.com/embed.js" as="script">
+    {{end}}{{end}}
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a; color: #e0e0e0;
+            min-height: 100vh;
+            display: flex; flex-direction: column; align-items: center;
+            padding: 24px 20px 40px;
+        }
+        .page-stack {
+            flex: 1;
+            width: 100%; max-width: 640px;
+            display: flex; flex-direction: column;
+        }
+        .top-bar {
+            width: 100%;
+            display: flex; align-items: center; gap: 12px;
+            margin-bottom: 24px;
+        }
+        .top-bar a {
+            color: #888; text-decoration: none; font-size: 0.9rem;
+            border-radius: 6px;
+        }
+        .top-bar a:hover { color: #fff; }
+        .top-bar a:focus-visible {
+            outline: 2px solid #60a5fa;
+            outline-offset: 3px;
+        }
+        .badge {
+            font-size: 0.7rem; padding: 2px 8px;
+            border-radius: 4px; background: #1a1a2e; color: #667;
+        }
+        .player { width: 100%; text-align: center; }
+        .meta { margin-bottom: 16px; }
+        .meta .title {
+            font-size: 1.05rem; color: #ccc; margin-bottom: 6px;
+            line-height: 1.35;
+        }
+        .meta .author { font-size: 0.85rem; color: #888; }
+        video {
+            width: 100%; max-height: 85vh;
+            border-radius: 12px; background: #000;
+        }
+        .embed-wrapper { display: flex; justify-content: center; }
+        .embed-wrapper iframe { max-width: 100%; border-radius: 12px; }
+        .yt-lazy {
+            position: relative; cursor: pointer;
+            display: inline-block; border-radius: 12px; overflow: hidden;
+            background: #000; max-width: 100%;
+        }
+        .yt-lazy:focus-visible {
+            outline: 2px solid #60a5fa;
+            outline-offset: 4px;
+        }
+        .yt-lazy img { display: block; width: 100%; height: auto; opacity: 0.85; }
+        .yt-lazy:hover img { opacity: 1; }
+        .yt-lazy .play-btn {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 68px; height: 48px;
+            background: rgba(0,0,0,0.75); border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s;
+        }
+        .yt-lazy:hover .play-btn { background: #ff0000; }
+        .yt-lazy .play-btn::after {
+            content: ''; display: block;
+            border-style: solid; border-width: 10px 0 10px 18px;
+            border-color: transparent transparent transparent #fff;
+            margin-left: 3px;
+        }
+        .yt-lazy.is-shorts { max-width: 360px; }
+        .yt-lazy.is-shorts img { aspect-ratio: 9/16; object-fit: cover; }
+        .error-box {
+            background: #1c1017; border: 1px solid #4a1c2e;
+            border-radius: 10px; padding: 18px 20px; color: #e8a0b0;
+            max-width: 480px; width: 100%; text-align: center;
+            line-height: 1.45;
+        }
+        .btn {
+            display: inline-block; margin-top: 16px; padding: 10px 20px;
+            background: #2563eb; color: #fff; text-decoration: none;
+            border-radius: 8px; font-size: 0.9rem;
+        }
+        .btn:hover { background: #1d4ed8; }
+        .btn:focus-visible {
+            outline: 2px solid #60a5fa;
+            outline-offset: 3px;
+        }
+        .fallback {
+            margin-top: 18px; font-size: 0.8rem;
+        }
+        .fallback a { color: #888; text-decoration: none; border-radius: 4px; }
+        .fallback a:hover { color: #ccc; text-decoration: underline; }
+        .fallback a:focus-visible {
+            outline: 2px solid #60a5fa;
+            outline-offset: 2px;
+        }
+        .page-footer {
+            width: 100%; max-width: 640px;
+            margin-top: auto;
+            padding-top: 28px;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+            font-size: 0.78rem;
+            color: #555;
+            text-align: center;
+            line-height: 1.6;
+        }
+        .page-footer__a {
+            color: #6b7280;
+            text-decoration: none;
+        }
+        .page-footer__a:hover { color: #9ca3af; text-decoration: underline; }
+        .page-footer__sep { margin: 0 0.35em; color: #444; }
+    </style>
+</head>
+<body>
+    <div class="page-stack">
+    <div class="top-bar">
+        <a href="/">&#8592; New link</a>
+        {{if .Result}}<span class="badge">{{.Result.Strategy}}</span>{{end}}
+    </div>
+
+    <div class="player">
+    {{if .Error}}
+        <div class="error-box">
+            <p>{{.Error}}</p>
+            {{if .URL}}<a href="{{.URL}}" target="_blank" rel="noopener noreferrer" class="btn">Open original link</a>{{end}}
+        </div>
+    {{else if .Result}}
+        {{if or .Result.Title .Result.Author}}
+        <div class="meta">
+            {{if .Result.Title}}<p class="title">{{.Result.Title}}</p>{{end}}
+            {{if .Result.Author}}<p class="author">{{.Result.Author}}</p>{{end}}
+        </div>
+        {{end}}
+
+        {{if .Result.VideoURL}}
+            <video src="{{.Result.VideoURL}}" controls autoplay playsinline></video>
+        {{else if eq .Result.Strategy "youtube-lazy-embed"}}
+            <div class="yt-lazy{{if .Result.YouTubeShort}} is-shorts{{end}}" id="yt-lazy" data-id="{{.Result.ContentID}}" role="button" tabindex="0" aria-label="Play YouTube video">
+                <img src="{{.Result.Thumbnail}}" alt="{{.Result.Title}}">
+                <div class="play-btn"></div>
+            </div>
+        {{else if .Result.EmbedHTML}}
+            <div class="embed-wrapper">{{.Result.EmbedHTML | safeHTML}}</div>
+        {{end}}
+
+        {{if .Result.CanonicalURL}}
+        <p class="fallback">
+            {{if .Result.EmbedHTML}}Embed not loading? {{end}}<a href="{{.Result.CanonicalURL}}" target="_blank" rel="noopener noreferrer">Open on {{.Result.Platform.DisplayName}} &#8599;</a>
+        </p>
+        {{end}}
+    {{end}}
+    </div>
+    </div>
+
+    {{template "footer" .}}
+
+    {{if .Result}}{{if eq .Result.Strategy "tiktok-oembed"}}
+    <script async src="https://www.tiktok.com/embed.js"></script>
+    {{end}}{{end}}
+
+    {{if .Result}}{{if eq .Result.Strategy "youtube-lazy-embed"}}
+    <script>
+    (function() {
+        var el = document.getElementById('yt-lazy');
+        if (!el) return;
+        function activate() {
+            if (el.getAttribute('data-loaded') === '1') return;
+            el.setAttribute('data-loaded', '1');
+            var id = el.dataset.id;
+            var shorts = el.classList.contains('is-shorts');
+            var iframe = document.createElement('iframe');
+            iframe.width = '100%';
+            iframe.height = '100%';
+            iframe.title = 'YouTube video player';
+            iframe.src = 'https://www.youtube.com/embed/' + encodeURIComponent(id) + '?rel=0&autoplay=1';
+            iframe.frameBorder = '0';
+            iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+            iframe.allowFullscreen = true;
+            iframe.style.borderRadius = '12px';
+            el.textContent = '';
+            el.appendChild(iframe);
+            el.style.aspectRatio = shorts ? '9/16' : '16/9';
+            el.style.width = '100%';
+            el.style.cursor = 'default';
+            el.removeAttribute('tabindex');
+            el.removeAttribute('role');
+        }
+        el.addEventListener('click', activate);
+        el.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                activate();
+            }
+        });
+    })();
+    </script>
+    {{end}}{{end}}
+</body>
+</html>
