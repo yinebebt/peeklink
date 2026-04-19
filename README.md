@@ -6,24 +6,10 @@ I built it because I do not want to keep social accounts around just to watch a 
 
 ## What It Does
 
-Paste a public TikTok, Instagram, or YouTube link and peeklink tries to show the video in a clean viewer.
+Paste a public TikTok, Instagram, or YouTube link and peeklink tries to show the video in a clean viewer. 
+If a platform blocks playback, the app falls back to the canonical link. 
 
-If a platform blocks playback, the app falls back to the canonical link.
-
-## Demo
-
-1. Open the homepage.
-2. Paste a public TikTok, Instagram, or YouTube link.
-3. Watch the clean viewer page load.
-
-## Features
-
-- Supports public TikTok, Instagram Reel, and YouTube links
-- Resolves short TikTok links before rendering
-- Uses in-memory caching to reduce repeat requests
-- Applies simple rate limiting per platform
-- Runs as a single Go binary
-- No database or external backend service
+Supports TikTok, Instagram Reels, and YouTube links with short-link resolution, in-memory caching, per-platform rate limiting, and a single-binary, no-database setup.
 
 ## How it Works
 
@@ -40,7 +26,7 @@ The resolver follows a simple fallback chain:
 ### Run locally
 
 ```bash
-go run .
+go run . --addr :8090
 ```
 
 Then open:
@@ -49,47 +35,16 @@ Then open:
 http://localhost:8090
 ```
 
-### Change the port
-
-```bash
-go run . --addr :8080
-```
-
 Footer links live in `templates/footer.html`; override with `--repo` and `--deeplink`, or pass empty strings to hide them.
 
-### Build a binary
+## Limits & Roadmap
 
-```bash
-go build -o peeklink .
-```
+- Private posts are not supported
+- Does not bypass platform authentication
+- Not intended for downloading or rehosting media
 
-### Run tests
-
-```bash
-go test ./...
-```
-
-## Supported Sources
-
-- TikTok
-- Instagram Reels and posts
-- YouTube watch, short, shorts, embed, and live URLs
-
-## Known Limits
-
-- Private posts are not supported.
-- Some YouTube links can still trigger platform-side bot checks depending on origin or browser.
-- This tool does not bypass platform authentication.
-- It is designed for viewing public links in the browser, not downloading or rehosting media.
-
-## Roadmap
-
-- Improve playback reliability and clearer errors when a platform blocks the viewer
-- Broader source support where it still fits the “peek, don’t replace the app” idea
-
-## Contributing
-
-Pull requests are welcome. Please keep changes small, dependency-light, and covered by tests when behavior changes.
+- Improve playback reliability and provide clearer errors when blocked
+- Expand supported sources while keeping the “peek, don’t replace the app” scope
 
 ## License
 
