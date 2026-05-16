@@ -29,11 +29,8 @@ var tmpl = template.Must(
 	}).ParseFS(templateFS, "templates/*.html"),
 )
 
-// Footer URLs from -repo and -deeplink (trimmed, trailing slashes removed).
-var (
-	footerRepoURL     string
-	footerDeeplinkURL string
-)
+// Footer URL from -repo (trimmed, trailing slashes removed).
+var footerRepoURL string
 
 var limiters = map[Platform]*rate.Limiter{
 	TikTok:    rate.NewLimiter(rate.Every(6*time.Second), 2),
@@ -46,11 +43,9 @@ var videoCache = NewCache[*VideoResult](5 * time.Minute)
 func main() {
 	addr := flag.String("addr", ":8090", "HTTP listen address (host:port)")
 	repo := flag.String("repo", "https://github.com/yinebebt/peeklink", "footer link for this project; empty hides")
-	deeplink := flag.String("deeplink", "https://github.com/yinebebt/deeplink", "footer link for deeplink; empty hides")
 	flag.Parse()
 
 	footerRepoURL = strings.TrimSpace(strings.TrimSuffix(*repo, "/"))
-	footerDeeplinkURL = strings.TrimSpace(strings.TrimSuffix(*deeplink, "/"))
 
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})))
 
@@ -79,8 +74,7 @@ func main() {
 
 // footerData is embedded in page template data for templates/footer.html.
 type footerData struct {
-	RepoURL     string
-	DeeplinkURL string
+	RepoURL string
 }
 
 type indexData struct {
@@ -102,10 +96,7 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 	setHTMLHeaders(w)
 
 	data := indexData{
-		footerData: footerData{
-			RepoURL:     footerRepoURL,
-			DeeplinkURL: footerDeeplinkURL,
-		},
+		footerData: footerData{RepoURL: footerRepoURL},
 	}
 	if err := tmpl.ExecuteTemplate(w, "index.html", data); err != nil {
 		slog.Error("template_error", "name", "index.html", "err", err)
@@ -139,11 +130,8 @@ func handleView(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := viewData{
-		footerData: footerData{
-			RepoURL:     footerRepoURL,
-			DeeplinkURL: footerDeeplinkURL,
-		},
-		URL: rawURL,
+		footerData: footerData{RepoURL: footerRepoURL},
+		URL:        rawURL,
 	}
 
 	if cached, ok := videoCache.Get(rawURL); ok {

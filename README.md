@@ -2,14 +2,14 @@
 
 peeklink is a small self-hosted web app for opening public video links without the social-media detour.
 
-I built it because I do not want to keep social accounts around just to watch a link someone sent me. When a friend shares a TikTok, Instagram, or YouTube video, I want a clean browser view with no account prompts, no app-install nudges, and no feed noise.
+I built it because I do not want to keep social accounts around just to watch a link someone sent me. When a friend shares a TikTok, Instagram, YouTube, or Facebook video, I want a clean browser view with no account prompts, no app-install nudges, and no feed noise.
 
 ## What It Does
 
-Paste a public TikTok, Instagram, or YouTube link and peeklink tries to show the video in a clean viewer. 
+Paste a public TikTok, Instagram, YouTube, or Facebook link and peeklink tries to show the video in a clean viewer. 
 If a platform blocks playback, the app falls back to the canonical link. 
 
-Supports TikTok, Instagram Reels, and YouTube links with short-link resolution, in-memory caching, per-platform rate limiting, and a single-binary, no-database setup.
+Supports TikTok, Instagram Reels, YouTube, and Facebook (reels, watch, share links) with short-link resolution, in-memory caching, per-platform rate limiting, and a single-binary, no-database setup.
 
 ## How it Works
 

@@ -1,13 +1,8 @@
 {{define "footer"}}
-{{if or .RepoURL .DeeplinkURL}}
+{{if .RepoURL}}
 <footer class="page-footer" role="contentinfo">
-    {{if .RepoURL}}
+    <span class="page-footer__prefix">powered by</span>
     <a class="page-footer__a" href="{{.RepoURL}}" target="_blank" rel="noopener noreferrer">peeklink</a>
-    {{end}}
-    {{if and .RepoURL .DeeplinkURL}}<span class="page-footer__sep" aria-hidden="true">·</span>{{end}}
-    {{if .DeeplinkURL}}
-    <a class="page-footer__a" href="{{.DeeplinkURL}}" target="_blank" rel="noopener noreferrer">deeplink</a>
-    {{end}}
 </footer>
 {{end}}
 {{end}}

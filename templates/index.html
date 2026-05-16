@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Open TikTok, Instagram, and YouTube links in a simple browser viewer—no app installs, no feed, no account wall.">
+     <meta name="description" content="Open TikTok, Instagram, YouTube, and Facebook links in a simple browser viewer—no app installs, no feed, no account wall.">
     <meta name="color-scheme" content="dark">
     <meta name="theme-color" content="#0a0a0a">
     <title>peeklink</title>
@@ -73,7 +73,8 @@
             outline: none;
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.45);
         }
-        .hint { margin-top: 22px; font-size: 0.8rem; color: #555; line-height: 1.4; }
+        .hint { margin-top: 18px; font-size: 0.82rem; color: #777; line-height: 1.4; letter-spacing: 0.02em; }
+        .hint--sub { margin-top: 8px; font-size: 0.78rem; color: #555; }
         .page-footer {
             width: 100%; max-width: 560px;
             margin-top: auto;
@@ -90,7 +91,7 @@
             text-decoration: none;
         }
         .page-footer__a:hover { color: #9ca3af; text-decoration: underline; }
-        .page-footer__sep { margin: 0 0.35em; color: #444; }
+        .page-footer__prefix { color: #555; margin-right: 0.3em; }
 
         @media (max-width: 640px) {
             form { flex-direction: column; }
@@ -103,10 +104,11 @@
         <h1>peeklink</h1>
         <p class="subtitle">Peek at videos without apps, accounts, or feed noise</p>
         <form action="/view" method="POST">
-            <input type="text" name="url" placeholder="Paste a TikTok, Instagram, or YouTube link…" autofocus autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="url" aria-label="Video URL" required>
+            <input type="text" name="url" placeholder="Paste a video link…" autofocus autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="url" aria-label="Video URL" required>
             <button type="submit">Watch</button>
         </form>
-        <p class="hint">No login walls, no tracking, no &ldquo;open in app&rdquo;</p>
+        <p class="hint">TikTok &middot; Instagram &middot; YouTube &middot; Facebook</p>
+        <p class="hint hint--sub">No login walls, no tracking, no &ldquo;open in app&rdquo;</p>
     </div>
     {{template "footer" .}}
 </body>
