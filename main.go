@@ -36,6 +36,7 @@ var limiters = map[Platform]*rate.Limiter{
 	TikTok:    rate.NewLimiter(rate.Every(6*time.Second), 2),
 	Instagram: rate.NewLimiter(rate.Every(6*time.Second), 2),
 	YouTube:   rate.NewLimiter(rate.Every(3*time.Second), 3),
+	Facebook:  rate.NewLimiter(rate.Every(6*time.Second), 2),
 }
 
 var videoCache = NewCache[*VideoResult](5 * time.Minute)
