@@ -21,6 +21,7 @@ const (
 	TikTok    Platform = "tiktok"
 	Instagram Platform = "instagram"
 	YouTube   Platform = "youtube"
+	Facebook  Platform = "facebook"
 	Unknown   Platform = "unknown"
 )
 
@@ -48,6 +49,8 @@ func (p Platform) DisplayName() string {
 		return "Instagram"
 	case YouTube:
 		return "YouTube"
+	case Facebook:
+		return "Facebook"
 	default:
 		return string(p)
 	}
@@ -68,6 +71,12 @@ var (
 	ytLiveRe   = regexp.MustCompile(`youtube\.com/live/([A-Za-z0-9_-]{11})`)
 
 	ytPatterns = []*regexp.Regexp{ytWatchRe, ytShortRe, ytShortsRe, ytEmbedRe, ytLiveRe}
+
+	fbShareRe  = regexp.MustCompile(`facebook\.com/share/[rvp]/([A-Za-z0-9_-]+)`)
+	fbReelRe   = regexp.MustCompile(`facebook\.com/reels?/([A-Za-z0-9_-]+)`)
+	fbWatchRe  = regexp.MustCompile(`facebook\.com/watch/?\?v=(\d+)`)
+	fbVideoRe  = regexp.MustCompile(`facebook\.com/[^/]+/videos/(\d+)`)
+	fbWatchSRe = regexp.MustCompile(`fb\.watch/[\w-]+`)
 )
 
 func detectPlatform(rawURL string) (Platform, string) {
@@ -113,6 +122,30 @@ func detectPlatform(rawURL string) (Platform, string) {
 			if len(segments) > 0 && len(segments[0]) == 11 {
 				return YouTube, segments[0]
 			}
+		case "facebook.com":
+			segments := splitPathSegments(parsed.EscapedPath())
+			if len(segments) >= 3 && segments[0] == "share" {
+				switch segments[1] {
+				case "r", "v", "p":
+					return Facebook, segments[2]
+				}
+			}
+			if len(segments) >= 1 && segments[0] == "watch" {
+				if id := strings.TrimSpace(parsed.Query().Get("v")); id != "" {
+					return Facebook, id
+				}
+			}
+			if id := matchPathSegments(parsed.EscapedPath(), "reel"); id != "" {
+				return Facebook, id
+			}
+			if id := matchPathSegments(parsed.EscapedPath(), "reels"); id != "" {
+				return Facebook, id
+			}
+			if len(segments) >= 3 && segments[1] == "videos" {
+				return Facebook, segments[2]
+			}
+		case "fb.watch":
+			return Facebook, ""
 		}
 
 		return Unknown, ""
@@ -139,6 +172,21 @@ func detectPlatform(rawURL string) (Platform, string) {
 			return YouTube, m[1]
 		}
 	}
+	if m := fbShareRe.FindStringSubmatch(rawURL); len(m) > 1 {
+		return Facebook, m[1]
+	}
+	if m := fbReelRe.FindStringSubmatch(rawURL); len(m) > 1 {
+		return Facebook, m[1]
+	}
+	if m := fbWatchRe.FindStringSubmatch(rawURL); len(m) > 1 {
+		return Facebook, m[1]
+	}
+	if m := fbVideoRe.FindStringSubmatch(rawURL); len(m) > 1 {
+		return Facebook, m[1]
+	}
+	if fbWatchSRe.MatchString(rawURL) {
+		return Facebook, ""
+	}
 	return Unknown, ""
 }
 
@@ -146,17 +194,28 @@ func isShortLink(rawURL string) bool {
 	parsed, err := url.Parse(rawURL)
 	if err == nil && parsed.Host != "" {
 		switch normalizeHost(parsed.Host) {
-		case "vm.tiktok.com", "vt.tiktok.com":
+		case "vm.tiktok.com", "vt.tiktok.com", "fb.watch":
 			return true
+		case "facebook.com":
+			segments := splitPathSegments(parsed.EscapedPath())
+			if len(segments) >= 2 && segments[0] == "share" {
+				switch segments[1] {
+				case "r", "v", "p":
+					return true
+				}
+			}
 		}
 	}
-	return tiktokShortRe.MatchString(rawURL)
+	return tiktokShortRe.MatchString(rawURL) || fbWatchSRe.MatchString(rawURL)
 }
 
 // allowedRedirectHosts prevents SSRF by only following redirects for known short-link domains.
+// facebook.com is gated additionally by isShortLink (only /share/{r,v,p}/ paths).
 var allowedRedirectHosts = map[string]bool{
 	"vm.tiktok.com": true,
 	"vt.tiktok.com": true,
+	"fb.watch":      true,
+	"facebook.com":  true,
 }
 
 // shortLinkCache stores resolved short-link to canonical-URL mappings.
@@ -177,7 +236,7 @@ func Resolve(ctx context.Context, rawURL string) (*VideoResult, error) {
 			if err != nil {
 				slog.Warn("short link resolution failed, using original", "url", rawURL, "err", err)
 			} else {
-				canonical = resolved
+				canonical = stripFacebookTracking(resolved)
 				shortLinkCache.Set(rawURL, canonical, 24*time.Hour)
 				slog.Info("resolved short link", "from", rawURL, "to", canonical)
 			}
@@ -200,6 +259,8 @@ func Resolve(ctx context.Context, rawURL string) (*VideoResult, error) {
 		return fetchInstagram(canonical, contentID)
 	case YouTube:
 		return fetchYouTube(ctx, canonical, contentID)
+	case Facebook:
+		return fetchFacebook(canonical, contentID)
 	default:
 		return &VideoResult{Platform: Unknown, CanonicalURL: canonical, Strategy: "direct-link"}, nil
 	}
@@ -236,7 +297,13 @@ func followRedirects(ctx context.Context, rawURL string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("User-Agent", browserUA)
+	// Facebook returns 400 for typical browser UAs on share links; the public
+	// crawler UA is the only one that gets a 302 to the canonical reel/video URL.
+	ua := browserUA
+	if host == "facebook.com" || host == "fb.watch" {
+		ua = "facebookexternalhit/1.1"
+	}
+	req.Header.Set("User-Agent", ua)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -279,6 +346,7 @@ func normalizeHost(host string) string {
 	}
 	host = strings.TrimPrefix(host, "www.")
 	host = strings.TrimPrefix(host, "m.")
+	host = strings.TrimPrefix(host, "web.")
 	return host
 }
 
@@ -406,4 +474,53 @@ func fetchYouTube(ctx context.Context, canonical, contentID string) (*VideoResul
 		Strategy:     "youtube-lazy-embed",
 		YouTubeShort: strings.Contains(strings.ToLower(canonical), "/shorts/"),
 	}, nil
+}
+
+// fetchFacebook builds an iframe using the Facebook video plugin endpoint.
+// plugins/video.php?href=<video_url> is the public, embeddable player and
+// works for share/r, share/v, watch, reel, and /<user>/videos/<id> links.
+// Direct facebook.com pages send X-Frame-Options: DENY, so this plugin URL
+// is the only reliable server-side option (mirrors the Instagram strategy).
+
+func fetchFacebook(canonical, contentID string) (*VideoResult, error) {
+	u := strings.ToLower(canonical)
+	vertical := strings.Contains(u, "/share/r/") || strings.Contains(u, "/reel/") || strings.Contains(u, "/reels/")
+
+	width, height := 560, 630
+	if vertical {
+		width, height = 360, 700
+	}
+	embedURL := fmt.Sprintf(
+		"https://www.facebook.com/plugins/video.php?href=%s&show_text=false&width=%d",
+		url.QueryEscape(canonical), width,
+	)
+	embedHTML := fmt.Sprintf(
+		`<iframe src="%s" width="%d" height="%d" `+
+			`title="Facebook video" loading="lazy" scrolling="no" `+
+			`referrerpolicy="strict-origin-when-cross-origin" `+
+			`sandbox="allow-scripts allow-same-origin allow-popups" `+
+			`allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" `+
+			`allowfullscreen="true" `+
+			`style="max-width:100%%; border:0; border-radius:12px;"></iframe>`,
+		embedURL, width, height,
+	)
+	return &VideoResult{
+		Platform: Facebook, ContentID: contentID, CanonicalURL: canonical,
+		EmbedHTML: embedHTML,
+		Strategy:  "facebook-embed",
+	}, nil
+}
+
+// stripFacebookTracking drops query params and normalizes the host on Facebook
+// canonical URLs so the plugin embed, cache key, and fallback link stay clean.
+// Non-Facebook URLs pass through unchanged.
+func stripFacebookTracking(rawURL string) string {
+	parsed, err := url.Parse(rawURL)
+	if err != nil || normalizeHost(parsed.Host) != "facebook.com" {
+		return rawURL
+	}
+	parsed.Host = "www.facebook.com"
+	parsed.RawQuery = ""
+	parsed.Fragment = ""
+	return parsed.String()
 }

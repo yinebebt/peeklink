@@ -29,6 +29,14 @@ func TestDetectPlatform(t *testing.T) {
 		{"tiktok video dotted user", "https://www.tiktok.com/@user.name/video/1234567890123456789", TikTok, "1234567890123456789"},
 		{"youtube watch v first param", "https://www.youtube.com/watch?v=abcDEF12345&list=PLxyz", YouTube, "abcDEF12345"},
 		{"query string should not impersonate platform", "https://example.com/?next=https://www.youtube.com/watch?v=dQw4w9WgXcQ", Unknown, ""},
+		{"facebook share reel", "https://www.facebook.com/share/r/18jVqYuuFs/", Facebook, "18jVqYuuFs"},
+		{"facebook share video", "https://www.facebook.com/share/v/abcDEF123/", Facebook, "abcDEF123"},
+		{"facebook share post", "https://www.facebook.com/share/p/abcDEF123/", Facebook, "abcDEF123"},
+		{"facebook watch", "https://www.facebook.com/watch?v=1234567890", Facebook, "1234567890"},
+		{"facebook reel", "https://www.facebook.com/reel/9876543210", Facebook, "9876543210"},
+		{"facebook user videos", "https://www.facebook.com/someuser/videos/1234567890", Facebook, "1234567890"},
+		{"facebook mobile share", "https://m.facebook.com/share/r/18jVqYuuFs/", Facebook, "18jVqYuuFs"},
+		{"fb.watch short", "https://fb.watch/abc123_/", Facebook, ""},
 		{"unknown", "https://example.com/video", Unknown, ""},
 	}
 
