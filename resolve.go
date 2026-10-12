@@ -285,9 +285,21 @@ func followRedirects(ctx context.Context, rawURL string) (string, error) {
 	defer cancel()
 
 	client := &http.Client{
-		CheckRedirect: func(_ *http.Request, via []*http.Request) error {
+		Transport: &http.Transport{
+			Proxy:                 http.ProxyFromEnvironment,
+			DialContext:           safeDialContext,
+			ForceAttemptHTTP2:     true,
+			MaxIdleConns:          4,
+			IdleConnTimeout:       30 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		},
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= 10 {
 				return fmt.Errorf("too many redirects (%d)", len(via))
+			}
+			if err := redirectHopAllowed(req.URL); err != nil {
+				return err
 			}
 			return nil
 		},
@@ -337,6 +349,84 @@ func fetchJSON(ctx context.Context, endpoint string, dest any) error {
 		return err
 	}
 	return json.Unmarshal(body, dest)
+}
+
+func redirectHopAllowed(u *url.URL) error {
+	if u == nil {
+		return fmt.Errorf("redirect missing URL")
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf("redirect scheme not allowed")
+	}
+	host := u.Hostname()
+	if ip := net.ParseIP(host); ip != nil {
+		if blockedIP(ip) {
+			return fmt.Errorf("redirect to internal address blocked")
+		}
+		return fmt.Errorf("redirect to raw IP not allowed")
+	}
+	if !redirectHostAllowed(host) {
+		return fmt.Errorf("redirect not allowed for host %q", host)
+	}
+	return nil
+}
+
+func redirectHostAllowed(host string) bool {
+	h := normalizeHost(host)
+	if allowedRedirectHosts[h] {
+		return true
+	}
+	switch h {
+	case "tiktok.com", "instagram.com", "youtube.com", "youtu.be", "facebook.com":
+		return true
+	}
+	suffixes := []string{
+		".tiktok.com",
+		".instagram.com",
+		".cdninstagram.com",
+		".facebook.com",
+		".fbcdn.net",
+		".youtube.com",
+		".ytimg.com",
+	}
+	for _, suf := range suffixes {
+		if strings.HasSuffix(h, suf) {
+			return true
+		}
+	}
+	return false
+}
+
+func blockedIP(ip net.IP) bool {
+	if ip == nil {
+		return true
+	}
+	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified()
+}
+
+func safeDialContext(ctx context.Context, network, addr string) (net.Conn, error) {
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return nil, err
+	}
+	if ip := net.ParseIP(host); ip != nil {
+		if blockedIP(ip) {
+			return nil, fmt.Errorf("blocked address")
+		}
+	} else {
+		ips, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+		if err != nil {
+			return nil, err
+		}
+		for _, ipa := range ips {
+			if blockedIP(ipa.IP) {
+				return nil, fmt.Errorf("blocked address")
+			}
+		}
+	}
+	var d net.Dialer
+	d.Timeout = 10 * time.Second
+	return d.DialContext(ctx, network, net.JoinHostPort(host, port))
 }
 
 func normalizeHost(host string) string {
